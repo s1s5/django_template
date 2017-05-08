@@ -13,11 +13,21 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 import sys
 import os
+import datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
 PROJECT_NAME = os.path.basename(PROJECT_DIR)
+
+
+# Quick-start development settings - unsuitable for production
+# See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = '******************************************'
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = eval(os.environ.get('DEBUG', 'True'))
 if sys.argv[1:2] == ['test']:  # テストの時はFalse
@@ -93,40 +103,20 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join(os.environ.get('LOG_ROOT', '/tmp'), 'django.log'),
-            'formatter': 'simple',
-            'maxBytes': 1024 * 1024 * 100,  # 100 mb
-        },
-        'mail_admins': {
-            'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler',
-            'include_html': True,
-        },
     },
     'loggers': {
         os.path.basename(PROJECT_NAME): {
-            'handlers': ['file', 'console', 'mail_admins'],
+            'handlers': ['console', ],
             'level': 'INFO',
             'propagate': True,
         },
         'django': {
-            'handlers': ['file', 'console', 'mail_admins'],
+            'handlers': ['console', ],
             'level': 'INFO',
             'propagate': True,
         },
     }
 }
-
-SEND_ERROR_EMAILS = eval(os.environ.get('SEND_ERROR_EMAILS', 'True'))
-if DEBUG and (not SEND_ERROR_EMAILS):
-    for i in list(LOGGING['loggers'].values()):
-        try:
-            i['handlers'].remove('mail_admins')
-        except:
-            pass
 
 ############################################
 # wsgi
@@ -190,8 +180,23 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 ############################################
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
+# make timeaware datetime
+# t = datetime.datetime.now().replace(tzinfo=JST())
 LANGUAGE_CODE = 'ja'
 TIME_ZONE = 'Asia/Tokyo'
+if sys.version_info[0] == 2:
+    class JST(datetime.tzinfo):
+        def utcoffset(self, dt):
+            return datetime.timedelta(hours=9)
+
+        def tzname(self, dt):
+            return "Asia/Tokyo"
+
+        def dst(self, dt):
+            return datetime.timedelta(0)
+    TZ_INFO = JST()
+else:
+    TZ_INFO = datetime.timezone(datetime.timedelta(hours=9))
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
@@ -202,7 +207,7 @@ USE_TZ = True
 # mail_adminsで送られる宛先
 ADMINS = eval(os.environ.get(
     'ADMINS',
-    "[('Shogo Sawai', 'sawai@sizebook.co.jp'), ('Yoko Sonoki', 'yoko.sonoki@sizebook.co.jp'), ]"))
+    "[('Shogo Sawai', '***@****.co.jp'), ]"))
 
 ############################################
 # cache
@@ -243,9 +248,8 @@ CACHES = {
 # Static files (CSS, JavaScript, Images)
 ############################################
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
-if 'STATIC_ROOT' in os.environ:
-    STATIC_ROOT = os.environ['STATIC_ROOT']
-
+STATIC_ROOT = os.environ.get(
+    'STATIC_ROOT', os.path.join(BASE_DIR, "static_root"))
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (
     os.path.join(BASE_DIR, PROJECT_DIR, "static"),
@@ -362,10 +366,6 @@ CELERYD_HIJACK_ROOT_LOGGER = False
 CELERYD_PREFETCH_MULTIPLIER = 1
 CELERYD_MAX_TASKS_PER_CHILD = 1000
 
-if not (DEBUG and (not SEND_ERROR_EMAILS)):
-    CELERY_SEND_TASK_ERROR_EMAILS = True
-else:
-    CELERY_SEND_TASK_ERROR_EMAILS = False
 
 ############################################
 # mail
@@ -458,6 +458,53 @@ NOSE_ARGS = [
     '--cover-html',  # coverage を html で cover/ に出力する
     '--cover-package={}'.format(PROJECT_NAME),  # coverage を取得する対象アプリは app1 と app2
 ]
+
+############################################
+# raven
+############################################
+USE_SENTRY = False
+raven_dsn = os.environ.get("RAVEN_DSN", "")
+if raven_dsn:
+    USE_SENTRY = True
+
+    INSTALLED_APPS += [
+        'raven.contrib.django.raven_compat',
+    ]
+
+    RAVEN_CONFIG = {
+        'dsn': raven_dsn,
+        # If you are using git, you can also automatically configure the
+        # release based on the git info.
+        'release': os.environ.get('RELEASE_ID', "Unknown release id"),
+    }
+
+    LOGGING['root'] = {
+        'level': 'WARNING',
+        'handlers': ['sentry', ],
+    }
+    LOGGING['handlers']['sentry'] = {
+        'level': 'ERROR',  # To capture more than ERROR, change to WARNING, INFO, etc.
+        'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+        'tags': {'custom-tag': 'x'},
+    }
+    LOGGING['loggers'].update({
+        'django.db.backends': {
+            'level': 'ERROR',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'raven': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+        'sentry.errors': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+    })
+
 
 ############################################
 # current project
