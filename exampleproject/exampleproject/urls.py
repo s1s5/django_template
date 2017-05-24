@@ -23,9 +23,6 @@ from django.views import generic
 from django.http import HttpResponseNotFound
 import django.contrib.auth.views as auth_views
 
-from lifecard_akb.apps.lifecard.views import custom_password_reset
-from lifecard_akb.apps.lifecard.views import CreditView as lifecard_CreditView
-
 
 def required(wrapping_functions, patterns_rslt):
     if not hasattr(wrapping_functions, '__iter__'):

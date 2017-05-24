@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 
 import sys
 import os
+import time
 import datetime
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -32,7 +33,9 @@ SECRET_KEY = '******************************************'
 DEBUG = eval(os.environ.get('DEBUG', 'True'))
 if sys.argv[1:2] == ['test']:  # テストの時はFalse
     DEBUG = False
-
+    MODE = "test"
+else:
+    MODE = os.environ.get('MODE', 'prod')
 
 ALLOWED_HOSTS = eval(os.environ.get('ALLOWED_HOSTS', "['*', ]"))
 SERVER_NAME = os.environ.get('SERVER_NAME', '')
@@ -137,6 +140,13 @@ if db_type == 'sqlite':
             'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
         }
     }
+    if MODE == 'test':
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                "NAME": ":memory:",
+            }
+        }
 elif db_type == 'postgres':
     DATABASES = {
         'default': {
@@ -213,6 +223,11 @@ ADMINS = eval(os.environ.get(
 # cache
 ############################################
 cache_type = os.environ.get('CACHE_TYPE', 'filebased')
+
+# テストの時は基本的にはcacheをOFFにしておく
+if MODE == 'test':
+    cache_type = 'dummy'
+
 if cache_type == 'memcached':
     CACHE_DEFAULT = dict(
         BACKEND='django.core.cache.backends.memcached.MemcachedCache',
@@ -221,6 +236,25 @@ if cache_type == 'memcached':
             os.environ.get('MEMCACHED_PORT', '11211'),
         ),
     )
+elif cache_type == 'redis':
+    CACHE_DEFAULT = {
+        'BACKEND': 'redis_cache.RedisCache',
+        'LOCATION': [
+            '{}:{}'.format(os.environ.get('REDIS_CACHE_HOST', 'redis'),
+                           os.environ.get('REDIS_CACHE_PORT', 6379), ),
+        ],
+        'OPTIONS': {
+            'DB': os.environ.get('REDIS_CACHE_DB', 1),
+            'PARSER_CLASS': 'redis.connection.HiredisParser',
+            'CONNECTION_POOL_CLASS': 'redis.BlockingConnectionPool',
+            'CONNECTION_POOL_CLASS_KWARGS': {
+                'max_connections': 50,
+                'timeout': 20,
+            },
+            'MAX_CONNECTIONS': 1000,
+            'PICKLE_VERSION': -1,
+        },
+    }
 elif cache_type == 'filebased':
     CACHE_DEFAULT = dict(
         BACKEND='django.core.cache.backends.filebased.FileBasedCache',
@@ -264,10 +298,14 @@ if 's3' in storage_type:
     AWS_ACCESS_KEY_ID = os.environ['STORAGE_AWS_ACCESS_KEY_ID']
     AWS_SECRET_ACCESS_KEY = os.environ['STORAGE_AWS_SECRET_ACCESS_KEY']
     AWS_STORAGE_BUCKET_NAME = os.environ['STORAGE_AWS_BUCKET_NAME']
+    AWS_S3_REGION_NAME = os.environ.get('STORAGE_AWS_S3_REGION_NAME', None)
+    AWS_S3_HOST = os.environ.get('STORAGE_AWS_S3_HOST', 's3-ap-northeast-1.amazonaws.com')
     AWS_LOCATION = PROJECT_NAME
     AWS_IS_GZIPPED = True
+    AWS_QUERYSTRING_AUTH = False
+    AWS_PRELOAD_METADATA = True
+    AWS_S3_FILE_OVERWRITE = False
 
-    import time
     expires = time.time() + 364 * 24 * 60 * 60  # 364 days from now
 
     AWS_HEADERS = {
@@ -276,35 +314,25 @@ if 's3' in storage_type:
         'Cache-Control': 'public, max-age=7776000',  # 90 days
     }
 
-    AWS_QUERYSTRING_AUTH = False
-    AWS_S3_HOST = 's3-ap-northeast-1.amazonaws.com'
-
-if 'hashed' in storage_type:
-    STATICFILES_STORAGE = 'lifecard_akb.custom_storages.HashedStaticFilesStorage'
-    DEFAULT_FILE_STORAGE = 'lifecard_akb.custom_storages.HashedFilesStorage'
-
 if storage_type == 'filesystem':
     STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 elif storage_type == 's3':
-    # STATICFILES_LOCATION = '{}/{}'.format(PROJECT_NAME, 'static')
-    # MEDIAFILES_LOCATION = '{}/{}'.format(PROJECT_NAME, 'media')
-    # MEDIA_URL = "https://%s/%s/" % (AWS_S3_CUSTOM_DOMAIN, MEDIAFILES_LOCATION)
-    STATICFILES_STORAGE = 'lifecard_akb.custom_storages.StaticS3Storage'
-    DEFAULT_FILE_STORAGE = 'lifecard_akb.custom_storages.MediaS3Storage'
+    STATICFILES_STORAGE = 'django_busybody.custom_storages.StaticS3Storage'
+    DEFAULT_FILE_STORAGE = 'django_busybody.custom_storages.MediaS3Storage'
 elif storage_type == 'hashed_s3':
-    HASHED_FILES_STORAGE_BACKEND_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
-    HASHED_STATIC_FILES_STORAGE_BACKEND_STORAGE = 'storages.backends.s3boto.S3BotoStorage'
+    STATICFILES_STORAGE = 'django_busybody.custom_storages.ManifestFilesStaticS3Storage'
+    DEFAULT_FILE_STORAGE = 'django_busybody.custom_storages.HashedMediaS3Storage'
 elif storage_type == 'hashed_filesystem':
-    HASHED_FILES_STORAGE_BACKEND_STORAGE = 'django.core.files.storage.FileSystemStorage'
-    HASHED_STATIC_FILES_STORAGE_BACKEND_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+    DEFAULT_FILE_STORAGE = 'django_busybody.custom_storages.HashedFileSystemStorage'
 
 ############################################
 # Redis
 ############################################
-REDIS_PORT = os.environ.get('REDIS_PORT', 6379)
-REDIS_DB = os.environ.get('REDIS_DB', 0)
-REDIS_HOST = os.environ.get('REDIS_HOST', '127.0.0.1')
+REDIS_CELERY_PORT = os.environ.get('REDIS_CELERY_PORT', 6379)
+REDIS_CELERY_DB = os.environ.get('REDIS_CELERY_DB', 2)
+REDIS_CELERY_HOST = os.environ.get('REDIS_CELERY_HOST', 'redis')
 
 ############################################
 # rabbit mq
@@ -355,7 +383,8 @@ CELERY_DISABLE_RATE_LIMITS = False
 CELERY_TASK_RESULT_EXPIRES = 600
 
 # Set redis as celery result backend
-CELERY_RESULT_BACKEND = 'redis://{}:{}/{}'.format(REDIS_HOST, REDIS_PORT, REDIS_DB)
+CELERY_RESULT_BACKEND = 'redis://{}:{}/{}'.format(
+    REDIS_CELERY_HOST, REDIS_CELERY_PORT, REDIS_CELERY_DB)
 CELERY_REDIS_MAX_CONNECTIONS = 128
 
 # Don't use pickle as serializer, json is much safer
@@ -373,6 +402,7 @@ CELERYD_MAX_TASKS_PER_CHILD = 1000
 SERVER_EMAIL = os.environ.get("SERVER_EMAIL", '{}.dev@sizebook.co.jp'.format(PROJECT_NAME))
 EMAIL_SUBJECT_PREFIX = "[{}]".format(PROJECT_NAME)
 email_type = os.environ.get("EMAIL_TYPE", "console")
+USE_AWS_SES = False
 if email_type == "smtp":
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = os.environ.get("EMAIL_HOST", '127.0.0.1')
@@ -387,6 +417,15 @@ elif email_type == "debug-smtp":
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     EMAIL_HOST = os.environ.get("EMAIL_HOST", '127.0.0.1')
     EMAIL_PORT = int(os.environ.get("EMAIL_PORT", '1025'))
+elif email_type == 'aws-ses':
+    USE_AWS_SES = True
+    EMAIL_BACKEND = 'django_ses.SESBackend'
+    AWS_SES_ACCESS_KEY_ID = os.environ["AWS_SES_ACCESS_KEY"]
+    AWS_SES_SECRET_ACCESS_KEY = os.environ["AWS_SES_SECRET_KEY"]
+    AWS_SES_REGION_NAME = os.environ["AWS_SES_REGION_NAME"]
+    AWS_SES_REGION_ENDPOINT = os.environ["AWS_SES_REGION_ENDPOINT"]
+    BOUNCY_TOPIC_ARN = os.environ['BOUNCY_TOPIC_ARN']
+    BOUNCY_VERIFY_CERTIFICATE = False  # <=これがないとUnicodeErrorが発生する．。。
 elif email_type == "file":
     EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
     EMAIL_FILE_PATH = 'django.email.log'

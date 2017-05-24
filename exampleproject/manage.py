@@ -23,7 +23,7 @@ if __name__ == "__main__":
     is_testing = 'test' == sys.argv[1]
     if is_testing:
         import coverage
-        cov = coverage.coverage(source=['lifecard_akb.apps', ],
+        cov = coverage.coverage(source=['exampleproject.apps', ],
                                 omit=['*/tests/*', '**/tests.py'])
         cov.erase()
         cov.start()
