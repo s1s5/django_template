@@ -190,8 +190,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 ############################################
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
-# make timeaware datetime
-# t = datetime.datetime.now().replace(tzinfo=JST())
 LANGUAGE_CODE = 'ja'
 TIME_ZONE = 'Asia/Tokyo'
 if sys.version_info[0] == 2:
@@ -258,7 +256,7 @@ elif cache_type == 'redis':
 elif cache_type == 'filebased':
     CACHE_DEFAULT = dict(
         BACKEND='django.core.cache.backends.filebased.FileBasedCache',
-        LOCATION='/tmp/django_{}_cache/'.format(PROJECT_NAME),
+        LOCATION=os.environ.get('CACHE_FILEBASED_LOCATION', '/tmp/django_{}_cache/'.format(PROJECT_NAME)),
         OPTIONS={
             'MAX_ENTRIES': 32768,
         }
