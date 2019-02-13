@@ -16,12 +16,15 @@ import sys
 import os
 import time
 import datetime
-
+import environ
+from django.contrib import messages
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROJECT_DIR = os.path.dirname(__file__)
 PROJECT_NAME = os.path.basename(PROJECT_DIR)
+
+env = environ.Env()
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -100,18 +103,6 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
-        'file': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': 'django.log',
-            'formatter': 'simple',
-            'maxBytes': 1024 * 1024 * 100,  # 100 mb
-        },
-        'mail_admins': {
-            'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler',
-            'include_html': True,
-        },
     },
     'loggers': {
         os.path.basename(PROJECT_NAME): {
@@ -134,7 +125,7 @@ MESSAGE_TAGS = {
 ############################################
 # wsgi
 ############################################
-WSGI_APPLICATION = '{}.wsgi.application'.format(PROJECT_NAME)
+WSGI_APPLICATION = 'djtemplate.wsgi.application'
 
 
 ############################################
@@ -142,10 +133,7 @@ WSGI_APPLICATION = '{}.wsgi.application'.format(PROJECT_NAME)
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
+    'default': env.db()
 }
 
 
@@ -203,7 +191,7 @@ STATIC_ROOT = os.environ.get(
     'STATIC_ROOT', os.path.join(BASE_DIR, PROJECT_DIR, "static"))
 STATIC_URL = '/static/'
 STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, PROJECT_DIR, "static"),
+
 )
 
 
@@ -242,7 +230,7 @@ DEBUG_TOOLBAR_PANELS = [
 # current project
 ############################################
 MIDDLEWARE += [
-    'django_busybody.middlewares.GlobalRequestMiddleware',
+    
 ]
 
 INSTALLED_APPS = [

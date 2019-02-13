@@ -1,0 +1,10 @@
+version: '2'
+
+services:
+  app:
+    volumes:
+      - .:/usr/src/app
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "42040:8000"
