@@ -33,7 +33,7 @@ env = environ.Env()
 SECRET_KEY = '$ep!#qrm+!1@)z_#b54-tfxhb(w^uz+z@_)jl&k*g&tbm2pm*$'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = []
 
@@ -194,6 +194,9 @@ STATICFILES_DIRS = (
 
 )
 
+MEDIA_ROOT = os.environ.get(
+    'MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
+MEDIA_URL = '/media/'
 
 ############################################
 # debug-toolbar

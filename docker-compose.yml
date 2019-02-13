@@ -1,28 +1,7 @@
 version: '2'
 
-volumes:
-  pg_data:
-  media_root:
-
 services:
-  db:
-    image: postgres
-    environment:
-      - POSTGRES_USER=psqluser
-      - POSTGRES_PASSWORD=psqlpass
-      - POSTGRES_DB=djtemplate
-      - PGDATA=/postgres/data
-    volumes:
-      - pg_data:/postgres/data
-    command: postgres -c max_connections=1000
-
   app:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - DATABASE_URL=psql://psqluser:psqlpass@db/djtemplate
-    depends_on:
-      - db
-    volumes:
-      - media_root:/data/media

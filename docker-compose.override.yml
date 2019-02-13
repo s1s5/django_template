@@ -1,11 +1,32 @@
 version: '2'
 
+volumes:
+  pg_data:
+  media_root:
+
 services:
-  app:
-    volumes:
-      - .:/usr/src/app
+  db:
+    image: postgres
     environment:
+      - POSTGRES_USER=psqluser
+      - POSTGRES_PASSWORD=psqlpass
+      - POSTGRES_DB=djtemplate
+      - PGDATA=/postgres/data
+    volumes:
+      - pg_data:/postgres/data
+    command: postgres -c max_connections=1000
+
+  app:
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=psql://psqluser:psqlpass@db/djtemplate
       - PYTHONUNBUFFERED=1
+      - MEDIA_ROOT=/data/media
     ports:
       - "42040:8000"
-    command:  bash -c "sleep 10; python manage.py migrate --noinput; python manage.py runserver 0.0.0.0:8000"
+    command:  bash -c "sleep 1; if [ ! -f /data/media/.first ]; then sleep 10; touch /data/media/.first; fi; python manage.py migrate --noinput; python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/usr/src/app
+      - media_root:/data/media
+    depends_on:
+      - db
