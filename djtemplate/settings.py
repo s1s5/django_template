@@ -133,7 +133,7 @@ WSGI_APPLICATION = 'djtemplate.wsgi.application'
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 DATABASES = {
-    'default': env.db()
+    'default': env.db(default="sqlite://:memory:")
 }
 
 
