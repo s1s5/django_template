@@ -6,7 +6,7 @@ volumes:
 
 services:
   db:
-    image: postgres
+    image: postgres:11.2
     environment:
       - POSTGRES_USER=psqluser
       - POSTGRES_PASSWORD=psqlpass
