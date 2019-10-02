@@ -24,7 +24,7 @@ services:
       - MEDIA_ROOT=/data/media
     ports:
       - "42040:8000"
-    command:  bash -c "sleep 1; if [ ! -f /data/media/.first ]; then sleep 10; touch /data/media/.first; fi; python manage.py migrate --noinput; python manage.py runserver 0.0.0.0:8000"
+    command:  bash -c "sleep 1; if [ ! -f /data/media/.first ]; then sleep 10; touch /data/media/.first; fi; python manage.py migrate --noinput; while [ true ]; do python manage.py runserver 0.0.0.0:8000 ; sleep 10; done"
     volumes:
       - .:/usr/src/app
       - media_root:/data/media
